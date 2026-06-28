@@ -79,4 +79,38 @@ def register_catalog() -> list[dict[str, Any]]:
     regs = get_registers()
     items = [asdict(r) for r in regs.values()]
     items.sort(key=lambda x: x["address"])
+    for item in items:
+        item["category"] = _register_category(int(item["address"]))
     return items
+
+
+def catalog_summary() -> dict[str, int]:
+    items = register_catalog()
+    sensors = sum(1 for i in items if not i["write"])
+    settings = sum(1 for i in items if i["write"])
+    return {"total": len(items), "sensors": sensors, "settings": settings}
+
+
+def filter_catalog(kind: str | None = None) -> list[dict[str, Any]]:
+    items = register_catalog()
+    if kind == "sensors":
+        return [i for i in items if not i["write"]]
+    if kind == "settings":
+        return [i for i in items if i["write"]]
+    return items
+
+
+def _register_category(address: int) -> str:
+    if address < 30500:
+        return "Device"
+    if address < 30700:
+        return "Energy counters"
+    if address < 30840:
+        return "Inverter"
+    if address < 30860:
+        return "Battery"
+    if address < 30885:
+        return "Power & grid"
+    if address < 40000:
+        return "External & generator"
+    return "Configuration"

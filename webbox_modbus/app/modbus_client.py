@@ -11,6 +11,40 @@ from .profile_loader import RegisterDef, get_registers
 
 _LOGGER = logging.getLogger(__name__)
 
+_MAX_BLOCK_WORDS = 120
+_MAX_BLOCK_GAP = 6
+
+
+def _word_count(reg: RegisterDef) -> int:
+    return 2 if reg.dtype in ("U32", "S32") else 1
+
+
+def _merge_read_blocks(regs: list[RegisterDef]) -> list[tuple[int, int, list[RegisterDef]]]:
+    if not regs:
+        return []
+    sorted_regs = sorted(regs, key=lambda r: r.address)
+    blocks: list[tuple[int, int, list[RegisterDef]]] = []
+    block_start = sorted_regs[0].address
+    block_end = sorted_regs[0].address + _word_count(sorted_regs[0])
+    block_regs = [sorted_regs[0]]
+
+    for reg in sorted_regs[1:]:
+        reg_start = reg.address
+        reg_end = reg.address + _word_count(reg)
+        gap = reg_start - block_end
+        new_end = max(block_end, reg_end)
+        if gap <= _MAX_BLOCK_GAP and (new_end - block_start) <= _MAX_BLOCK_WORDS:
+            block_end = new_end
+            block_regs.append(reg)
+        else:
+            blocks.append((block_start, block_end - block_start, block_regs))
+            block_start = reg_start
+            block_end = reg_end
+            block_regs = [reg]
+
+    blocks.append((block_start, block_end - block_start, block_regs))
+    return blocks
+
 
 def _decode(words: List[int], reg: RegisterDef) -> Union[int, float]:
     dtype = reg.dtype
@@ -118,14 +152,28 @@ class SMAModbusClient:
         self._write_words(reg.address, _encode(value, reg))
 
     def read_many(self, names: List[str]) -> Dict[str, Union[int, float]]:
+        targets = [self._registers[n] for n in names if n in self._registers]
+        if not targets:
+            return {}
         out: Dict[str, Union[int, float]] = {}
-        for name in names:
-            if name not in self._registers:
-                continue
+        for start, count, block_regs in _merge_read_blocks(targets):
             try:
-                out[name] = self.read_register(name)
+                words = self._read_words(start, count)
             except Exception as exc:
-                _LOGGER.warning("Modbus read %s failed: %s", name, exc)
+                _LOGGER.warning("Modbus block read @ %s failed: %s", start, exc)
+                for reg in block_regs:
+                    try:
+                        out[reg.name] = self.read_register(reg.name)
+                    except Exception as inner:
+                        _LOGGER.warning("Modbus read %s failed: %s", reg.name, inner)
+                continue
+            for reg in block_regs:
+                offset = reg.address - start
+                wc = _word_count(reg)
+                try:
+                    out[reg.name] = _decode(words[offset : offset + wc], reg)
+                except Exception as exc:
+                    _LOGGER.warning("Modbus decode %s failed: %s", reg.name, exc)
         return out
 
     def read_all(self) -> Dict[str, Union[int, float]]:

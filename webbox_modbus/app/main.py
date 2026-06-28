@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 from . import __version__
 from .crosswalk import crosswalk_catalog
 from .parameters import enrich_parameters, get_commands, parameter_catalog
-from .profile_loader import register_catalog
+from .profile_loader import catalog_summary, filter_catalog, register_catalog
 from .services import (
     build_snapshot,
     dual_write_parameter,
@@ -245,8 +245,9 @@ async def sunny_island_catalog() -> list[dict[str, Any]]:
 
 
 @app.get("/api/catalog/modbus")
-async def modbus_catalog() -> list[dict[str, Any]]:
-    return register_catalog()
+async def modbus_catalog(kind: str | None = None) -> dict[str, Any]:
+    items = filter_catalog(kind)
+    return {"summary": catalog_summary(), "registers": items}
 
 
 @app.get("/api/catalog/crosswalk")
@@ -329,15 +330,26 @@ async def modbus_status(webbox_id: str) -> dict[str, Any]:
 
 
 @app.get("/api/webboxes/{webbox_id}/modbus/registers")
-async def modbus_registers(webbox_id: str) -> dict[str, Any]:
+async def modbus_registers(webbox_id: str, kind: str | None = None) -> dict[str, Any]:
     wb = _require(webbox_id)
-    catalog = register_catalog()
+    catalog = filter_catalog(kind)
     names = [r["name"] for r in catalog]
     live = await read_modbus_registers(wb, names)
     rows = []
+    values = live.get("registers") or {}
     for reg in catalog:
-        rows.append({**reg, "value": live.get("registers", {}).get(reg["name"])})
-    return {"online": live.get("online", False), "error": live.get("error"), "registers": rows}
+        rows.append({**reg, "value": values.get(reg["name"])})
+    populated = sum(1 for r in rows if r.get("value") is not None)
+    return {
+        "online": live.get("online", False),
+        "error": live.get("error"),
+        "host": wb["host"],
+        "port": wb.get("modbus_port", 502),
+        "unit_id": wb.get("modbus_unit_id", 3),
+        "summary": catalog_summary(),
+        "populated": populated,
+        "registers": rows,
+    }
 
 
 @app.put("/api/webboxes/{webbox_id}/modbus/registers/{name}")
