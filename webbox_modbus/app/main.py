@@ -148,10 +148,12 @@ async def index() -> Response:
     return Response(content=_INDEX_HTML, media_type="text/html")
 
 
-@app.get("/favicon.ico", include_in_schema=False)
-async def favicon() -> FileResponse | JSONResponse:
+@app.get("/favicon.ico", include_in_schema=False, response_model=None)
+async def favicon() -> Response:
     icon = _STATIC_DIR / "favicon.svg"
-    return FileResponse(icon) if icon.exists() else JSONResponse({}, status_code=204)
+    if icon.exists():
+        return FileResponse(icon)
+    return Response(status_code=204)
 
 
 @app.get("/api/health")
