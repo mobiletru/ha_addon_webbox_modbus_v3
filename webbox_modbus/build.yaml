@@ -3,11 +3,13 @@ build_from:
   amd64: ghcr.io/home-assistant/amd64-base:3.21
 labels:
   org.opencontainers.image.title: "WebBox Modbus Dashboard"
-  org.opencontainers.image.description: "Sunny WebBox RPC + Modbus TCP dashboard for Home Assistant OS"
+  org.opencontainers.image.description: "Home Assistant OS add-on — Sunny WebBox RPC + Modbus TCP"
   org.opencontainers.image.source: "https://github.com/mobiletru/ha_addon_webbox_modbus"
   org.opencontainers.image.licenses: "MIT"
   io.hass.type: addon
   io.hass.name: "WebBox Modbus Dashboard"
   io.hass.description: "WebBox RPC and Modbus dashboard for Sunny Island systems"
-  io.hass.version: "1.0.1"
+  io.hass.version: "1.2.0"
   io.hass.arch: aarch64,amd64
+args:
+  CLOUDFLARED_VERSION: latest
