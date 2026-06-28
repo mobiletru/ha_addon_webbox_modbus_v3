@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.1
+
+- Version bump; sync `io.hass.version` build label with add-on manifest
+
 ## 1.4.0
 
 - Integrate webbox-panel features into the main dashboard: live verified map, register explorer, guarded setpoint writes, ack-gated raw write

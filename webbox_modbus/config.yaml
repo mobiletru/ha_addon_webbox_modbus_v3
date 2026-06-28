@@ -1,5 +1,5 @@
 name: WebBox Modbus Dashboard
-version: "1.4.0"
+version: "1.4.1"
 slug: webbox_modbus
 description: Home Assistant panel app for SMA Sunny WebBox JSON-RPC and Modbus TCP (Sunny Island 6048).
 url: https://github.com/mobiletru/ha_addon_webbox_modbus
