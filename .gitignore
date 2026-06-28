@@ -5,4 +5,4 @@ venv/
 data/
 *.egg-info/
 .DS_Store
-Thumbs.db
+debug-*.log

@@ -448,10 +448,14 @@ async def modbus_write_register_route(
 
 
 @app.get("/api/webboxes/{webbox_id}/modbus/bundle")
-async def modbus_bundle(webbox_id: str, kind: str | None = None) -> dict[str, Any]:
+async def modbus_bundle(
+    webbox_id: str,
+    kind: str | None = None,
+    profile: bool = True,
+) -> dict[str, Any]:
     wb = _require(webbox_id)
     try:
-        return await read_modbus_bundle(wb, kind)
+        return await read_modbus_bundle(wb, kind, include_profile=profile)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 

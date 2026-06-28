@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.4.3
+
+- Faster startup: live dashboard loads first (`profile=false`), full SI6048 profile loads in background
+- Block-read optimization for live dashboard registers (fewer Modbus round-trips)
+- Background poll refreshes live values only; full profile on manual refresh or filter change
+- Writable catalog loads when a WebBox is selected, not on initial page load
+
 ## 1.4.2
 
 - Unified Modbus write policy: block profile-table and raw writes to setting registers

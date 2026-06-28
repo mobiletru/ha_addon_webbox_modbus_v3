@@ -365,7 +365,8 @@ async function probeModbusStatus(id) {
     }
 }
 
-async function loadModbusBundle() {
+async function loadModbusBundle(options = {}) {
+    const includeProfile = options.includeProfile !== false;
     const wb = currentWebBox();
     if (!wb || wb.modbus_enabled === false) {
         setState({ modbusRegisters: [], modbusSummary: null, liveDashboard: null, modbusStatus: null });
@@ -373,7 +374,9 @@ async function loadModbusBundle() {
     }
     try {
         const kind = state.modbusKind || "sensors";
-        const data = await api(`/webboxes/${wb.id}/modbus/bundle?kind=${encodeURIComponent(kind)}`);
+        const data = await api(
+            `/webboxes/${wb.id}/modbus/bundle?kind=${encodeURIComponent(kind)}&profile=${includeProfile}`,
+        );
         setState({
             modbusRegisters: data.registers || [],
             modbusSummary: data.summary || null,
@@ -922,7 +925,7 @@ function selectWebBox(id) {
     $("#device-detail").classList.add("hidden");
     syncModbusUnitFields();
     probeStatus(id);
-    loadModbusBundle();
+    loadModbusBundle({ includeProfile: false }).then(() => loadModbusBundle());
     loadWritableCatalog();
     schedulePolling();
 }
@@ -1022,7 +1025,7 @@ function schedulePolling() {
     const intervalMs = Math.max(30000, (wb?.poll_interval || 30) * 1000);
     state.livePollTimer = setInterval(() => {
         probeStatus(state.selectedId);
-        loadModbusBundle();
+        loadModbusBundle({ includeProfile: false });
         if (state.selectedDeviceKey) {
             loadDeviceData();
             if (state.activeTab === "dual" || state.activeTab === "compare") loadSnapshot();
@@ -1341,7 +1344,6 @@ async function pollHealth() {
 async function main() {
     wireEvents();
     await pollHealth();
-    await loadWritableCatalog();
     if (state.healthTimer) clearInterval(state.healthTimer);
     state.healthTimer = setInterval(pollHealth, 30000);
     await loadWebBoxes();
